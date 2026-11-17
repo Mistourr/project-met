@@ -20,6 +20,9 @@ export default defineConfig({
 			adapter: adapter()
 		})
 	],
+	ssr: {
+		noExternal: ["@amcharts/amcharts5"]
+	},
 	test: {
 		expect: { requireAssertions: true },
 		projects: [
