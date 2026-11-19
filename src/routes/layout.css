@@ -1,1 +1,49 @@
 @import 'tailwindcss';
+
+@font-face {
+	font-family: 'Playfair Display';
+	src: url('/PlayfairDisplay-Regular.otf') format('opentype');
+	font-weight: 400;
+	font-style: normal;
+	font-display: swap;
+}
+@font-face {
+	font-family: 'Playfair Display';
+	src: url('/PlayfairDisplay-Italic.otf') format('opentype');
+	font-weight: 400;
+	font-style: italic;
+	font-display: swap;
+}
+@font-face {
+	font-family: 'Playfair Display';
+	src: url('/PlayfairDisplay-Bold.otf') format('opentype');
+	font-weight: 700;
+	font-style: normal;
+	font-display: swap;
+}
+@font-face {
+	font-family: 'Playfair Display';
+	src: url('/PlayfairDisplay-BoldItalic.otf') format('opentype');
+	font-weight: 700;
+	font-style: italic;
+	font-display: swap;
+}
+@font-face {
+	font-family: 'Playfair Display';
+	src: url('/PlayfairDisplay-Black.otf') format('opentype');
+	font-weight: 900;
+	font-style: normal;
+	font-display: swap;
+}
+@font-face {
+	font-family: 'Playfair Display';
+	src: url('/PlayfairDisplay-BlackItalic.otf') format('opentype');
+	font-weight: 900;
+	font-style: italic;
+	font-display: swap;
+}
+
+@theme {
+	--font-sans: 'Playfair Display', ui-serif, Georgia, serif;
+	--font-serif: 'Playfair Display', ui-serif, Georgia, serif;
+}
