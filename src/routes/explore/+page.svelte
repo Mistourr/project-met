@@ -2,28 +2,24 @@
     import { page } from "$app/state";
     import { untrack } from "svelte";
     import { metMuseumHttpClient } from "#lib/api/metmuseum.ts";
+    import { fitGrid } from "#lib/layout/fit-grid.ts"
     import MetObjectCard from "../../components/explore/MetObjectCard.svelte";
 
-    // Cards are 4:3 (width:height). They grow to fill the row, but never
-    // shrink below MIN_CARD_WIDTH: when they would, the row loses a column.
-    const MIN_CARD_WIDTH = 256; // px
-    const GAP = 16; // px, keep in sync with gap-4 on the grid
-    const RATIO = 3 / 4; // height / width
+    const GAP = 16; // px
 
     // Size of the middle area, measured by the browser.
     let width = $state(0);
     let height = $state(0);
 
-    const columns = $derived(Math.max(1, Math.floor((width + GAP) / (MIN_CARD_WIDTH + GAP))));
-    const cardHeight = $derived(((width - GAP * (columns - 1)) / columns) * RATIO);
-    const rows = $derived(Math.max(1, Math.floor((height + GAP) / (cardHeight + GAP))));
+    const grid = $derived(fitGrid({ width, height, minCardWidth: 256, gap: GAP, ratio: 3 / 4 }));
 
     // Resizing the window changes the size continuously: wait for it to settle
-    // before asking the API for a page of the new size.
+    // before asking the API for a page of the new size (but not on first measure).
     let pageSize = $state(0);
     $effect(() => {
-        const size = width > 0 && height > 0 ? columns * rows : 0;
-        const timeout = setTimeout(() => (pageSize = size), untrack(() => pageSize) === 0 ? 0 : 250);
+        const size = width > 0 && height > 0 ? grid.columns * grid.rows : 0;
+        const delay = untrack(() => pageSize) === 0 ? 0 : 250;
+        const timeout = setTimeout(() => (pageSize = size), delay);
         return () => clearTimeout(timeout);
     });
 
@@ -41,8 +37,7 @@
     );
 
     function href(target: number) {
-        const params = new URLSearchParams({ q, offset: String(target) });
-        return `?${params}`;
+        return `?${new URLSearchParams({ q, offset: String(target) })}`;
     }
 </script>
 
@@ -57,30 +52,33 @@
         <button type="submit" class="border rounded-md px-3 py-2">Search</button>
     </form>
 
-    <main class="flex-1 min-h-0 overflow-hidden flex flex-col justify-center" bind:clientWidth={width} bind:clientHeight={height}>
+    <main
+        class="flex-1 min-h-0 overflow-hidden flex flex-col justify-center"
+        bind:clientWidth={width}
+        bind:clientHeight={height}
+    >
         <div
-            class="grid gap-4"
-            style="grid-template-columns: repeat({columns}, minmax(0, 1fr)); grid-auto-rows: {cardHeight}px;"
+            class="grid"
+            style:gap="{GAP}px"
+            style:grid-template-columns="repeat({grid.columns}, minmax(0, 1fr))"
+            style:grid-auto-rows="{grid.cardHeight}px"
         >
             {#await results}
                 {#each { length: pageSize }}
                     <span class="bg-gray-200 animate-pulse rounded-md"></span>
                 {/each}
             {:then res}
-                {#if res}
-                    {#each res.objectIDs as id (id)}
-                        <MetObjectCard {id} />
-                    {/each}
-                {/if}
+                {#each res?.objectIDs ?? [] as id (id)}
+                    <MetObjectCard {id} />
+                {:else}
+                    {#if res}
+                        <p class="col-span-full">No objects match "{q}".</p>
+                    {/if}
+                {/each}
             {:catch error}
-                <p class="col-span-full" style="color: red">{error.message}</p>
+                <p class="col-span-full text-red-600">{error.message}</p>
             {/await}
         </div>
-        {#await results then res}
-            {#if res?.total === 0}
-                <p>No objects match "{q}".</p>
-            {/if}
-        {/await}
     </main>
 
     <nav class="flex items-center justify-center gap-4">
@@ -88,13 +86,13 @@
             <span>Loading…</span>
         {:then res}
             {#if res && res.total > 0}
+                <!-- Pages before this one, plus this one and the ones after it -->
+                {@const current = Math.ceil(offset / pageSize) + 1}
+                {@const pages = current - 1 + Math.ceil((res.total - offset) / pageSize)}
                 {#if offset > 0}
                     <a href={href(Math.max(0, offset - pageSize))}>Previous</a>
                 {/if}
-                <span>
-                    Page {Math.ceil(offset / pageSize) + 1} of {Math.ceil(offset / pageSize) + Math.ceil((res.total - offset) / pageSize)}
-                    ({res.total} objects)
-                </span>
+                <span>Page {current} of {pages} ({res.total} objects)</span>
                 {#if offset + pageSize < res.total}
                     <a href={href(offset + pageSize)}>Next</a>
                 {/if}

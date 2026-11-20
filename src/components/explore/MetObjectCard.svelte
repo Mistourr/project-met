@@ -3,14 +3,10 @@
 
 <script lang="ts">
     import { metMuseumHttpClient } from "#lib/api/metmuseum.ts";
-    import type { MetObject } from "#lib/models/metmuseum.ts";
-    import { onMount } from "svelte";
 
-    const { id } = $props();
+    const { id }: { id: number } = $props();
     const object = $derived(metMuseumHttpClient.object(id))
 </script>
-
-
 
 {#await object}
     <div class="flex flex-col gap-2 w-full h-full min-h-0">
