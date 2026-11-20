@@ -158,7 +158,7 @@
                 onclick={() => (filtersOpen = !filtersOpen)}
                 aria-expanded={filtersOpen}
                 aria-controls="filters"
-                class="border rounded-md px-3 py-2 {filtersOpen ? 'bg-gray-100' : ''}"
+                class="border rounded-md px-3 py-2 {filtersOpen ? 'bg-(--met-brand-primary) text-white' : ''}"
             >
                 Filters{#if activeFilters}&nbsp;({activeFilters}){/if}
             </button>
@@ -196,7 +196,7 @@
                 <input form="search" name="dateEnd" inputmode="numeric" pattern="-?[0-9]+" title="A year, negative for BC" bind:value={draft.to} placeholder="e.g. 1999" class="w-40 border rounded-md px-3 py-2" />
             </label>
             <button type="button" onclick={clearFilters} class="underline text-sm py-2">Clear filters</button>
-            <button type="submit" form="search" class="border rounded-md px-3 py-2">Apply</button>
+            <button type="submit" form="search" class="border rounded-md px-3 py-2 hover:bg-gray-100">Apply</button>
             {#if draftTerm}
                 <p class="basis-full text-sm text-gray-600">
                     A {draftTerm} replaces the text search, and tag and culture can't be combined: the collection can only be searched one way at a time.
@@ -246,11 +246,11 @@
                 {@const current = Math.ceil(offset / pageSize) + 1}
                 {@const pages = current - 1 + Math.ceil((res.total - offset) / pageSize)}
                 {#if offset > 0}
-                    <a href={href(Math.max(0, offset - pageSize))}>Previous</a>
+                    <a href={href(Math.max(0, offset - pageSize))} class="btn-like rounded w-24 text-center">Previous</a>
                 {/if}
                 <span>Page {current} of {pages} ({res.total} objects)</span>
                 {#if offset + pageSize < res.total}
-                    <a href={href(offset + pageSize)}>Next</a>
+                    <a href={href(offset + pageSize)} class="btn-like rounded w-24 text-center">Next</a>
                 {/if}
             {/if}
         {/await}
