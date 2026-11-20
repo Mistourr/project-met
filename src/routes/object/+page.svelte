@@ -103,7 +103,13 @@
             {#if o.tags?.length}
                 <ul class="flex flex-wrap gap-2">
                     {#each o.tags as tag (tag.term)}
-                        <li class="border rounded-full px-3 py-1 text-sm">{tag.term}</li>
+                        <li>
+                            <!-- Other objects with this tag -->
+                            <a
+                                href="/explore?{new URLSearchParams({ q: tag.term, tags: 'true' })}"
+                                class="block border rounded-full px-3 py-1 text-sm hover:bg-gray-100"
+                            >{tag.term}</a>
+                        </li>
                     {/each}
                 </ul>
             {/if}

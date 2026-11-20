@@ -42,19 +42,28 @@
         return Number.isInteger(dateBegin) && Number.isInteger(dateEnd) ? { dateBegin, dateEnd } : undefined;
     });
 
+    // ?tags=true matches `q` against the objects' subject tags only, e.g. from
+    // a tag on an object's page.
+    const tags = $derived(page.url.searchParams.get("tags") === "true");
+
     const results = $derived(
         pageSize > 0
-            ? metMuseumHttpClient.search({ q, hasImages: true, offset, limit: pageSize, ...period })
+            ? metMuseumHttpClient.search({
+                  q,
+                  hasImages: true,
+                  offset,
+                  limit: pageSize,
+                  ...period,
+                  ...(tags && { tags: true }),
+              })
             : undefined
     );
 
-    // Same search and period, at another position.
-    function href(target: number, withPeriod = true) {
-        const params = new URLSearchParams({ q, offset: String(target) });
-        if (period && withPeriod) {
-            params.set("dateBegin", String(period.dateBegin));
-            params.set("dateEnd", String(period.dateEnd));
-        }
+    // The current URL at another position, without the given filters.
+    function href(target: number, ...without: string[]) {
+        const params = new URLSearchParams(page.url.search);
+        params.set("offset", String(target));
+        for (const name of without) params.delete(name);
         return `?${params}`;
     }
 </script>
@@ -71,23 +80,39 @@
                 placeholder="Search the collection"
                 class="flex-1 border rounded-md px-3 py-2"
             />
-            <!-- Searching again stays within the period -->
+            <!-- Searching again keeps the filters -->
             {#if period}
                 <input type="hidden" name="dateBegin" value={period.dateBegin} />
                 <input type="hidden" name="dateEnd" value={period.dateEnd} />
+            {/if}
+            {#if tags}
+                <input type="hidden" name="tags" value="true" />
             {/if}
             <button type="submit" class="border rounded-md px-3 py-2">Search</button>
         </form>
     </div>
 
-    {#if period}
-        <div class="flex">
-            <span class="flex items-center gap-2 border rounded-full pl-3 pr-1 py-1 text-sm">
-                Period: {formatYear(period.dateBegin)} – {formatYear(period.dateEnd)}
-                <a href={href(0, false)} aria-label="Remove the period filter" class="rounded-full w-6 h-6 flex items-center justify-center hover:bg-gray-200">×</a>
-            </span>
+    {#if period || tags}
+        <div class="flex flex-wrap gap-2">
+            {#if tags}
+                {@render filter("Tag only", "Search all of the objects' data again", href(0, "tags"))}
+            {/if}
+            {#if period}
+                {@render filter(
+                    `Period: ${formatYear(period.dateBegin)} – ${formatYear(period.dateEnd)}`,
+                    "Remove the period filter",
+                    href(0, "dateBegin", "dateEnd")
+                )}
+            {/if}
         </div>
     {/if}
+
+    {#snippet filter(label: string, removeLabel: string, removeHref: string)}
+        <span class="flex items-center gap-2 border rounded-full pl-3 pr-1 py-1 text-sm">
+            {label}
+            <a href={removeHref} aria-label={removeLabel} class="rounded-full w-6 h-6 flex items-center justify-center hover:bg-gray-200">×</a>
+        </span>
+    {/snippet}
 
 
     <main
@@ -111,7 +136,7 @@
                 {:else}
                     {#if res}
                         <p class="col-span-full">
-                            No objects match "{q}"{#if period}&nbsp;between {formatYear(period.dateBegin)} and {formatYear(period.dateEnd)}{/if}.
+                            No objects {tags ? "tagged" : "match"} "{q}"{#if period}&nbsp;between {formatYear(period.dateBegin)} and {formatYear(period.dateEnd)}{/if}.
                         </p>
                     {/if}
                 {/each}
