@@ -42,15 +42,21 @@
 </script>
 
 <div class="w-full h-dvh flex flex-col gap-4 p-4">
-    <form method="GET" class="flex gap-2">
-        <input
-            name="q"
-            value={q === "*" ? "" : q}
-            placeholder="Search the collection"
-            class="flex-1 border rounded-md px-3 py-2"
-        />
-        <button type="submit" class="border rounded-md px-3 py-2">Search</button>
-    </form>
+    <div class="flex flex-row gap-3 h-fit w-full">
+        <a href="/" class="w-18 h-8 aspect-square" aria-roledescription="Go to homepage">
+            <img src="/the_met.avif" alt="Logo">
+        </a>
+        <form method="GET" class="flex gap-2 w-full">
+            <input
+                name="q"
+                value={q === "*" ? "" : q}
+                placeholder="Search the collection"
+                class="flex-1 border rounded-md px-3 py-2"
+            />
+            <button type="submit" class="border rounded-md px-3 py-2">Search</button>
+        </form>
+    </div>
+    
 
     <main
         class="flex-1 min-h-0 overflow-hidden flex flex-col justify-center"
