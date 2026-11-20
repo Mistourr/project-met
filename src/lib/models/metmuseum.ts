@@ -7,6 +7,34 @@ export type ObjectsResponse = {
   objectIDs: number[];
 };
 
+/** Query parameters of GET /v1.1/search */
+export type SearchParams = {
+    /** Search term, matched against all object data */
+    q: string
+    /** Index of the first result to return */
+    offset?: number
+    /** Number of results per page */
+    limit?: number
+    isHighlight?: boolean
+    /** Match `q` against the title only */
+    title?: boolean
+    /** Match `q` against subject keyword tags only */
+    tags?: boolean
+    departmentId?: number
+    isOnView?: boolean
+    /** Match `q` against artist name or culture only */
+    artistOrCulture?: boolean
+    /** e.g. ["Ceramics", "Paintings"], sent pipe-separated */
+    medium?: string[]
+    hasImages?: boolean
+    /** e.g. ["France", "Paris"], sent pipe-separated */
+    geoLocation?: string[]
+    /** Must be used together with `dateEnd` */
+    dateBegin?: number
+    /** Must be used together with `dateBegin` */
+    dateEnd?: number
+}
+
 /** GET /public/collection/v1/search and /public/collection/v1.1/search
  *  (v1.1 is paginated via offset/limit; v1 is deprecated and retires 2026-10-01) */
 export type SearchResponse = {
