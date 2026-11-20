@@ -8,6 +8,7 @@
 ## What could be done
 - i18n and l10n
 - dark mode
+- make API tests less flaky somehow
 
 ## Run the app
 

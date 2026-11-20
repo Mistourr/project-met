@@ -3,6 +3,7 @@
     import { untrack } from "svelte";
     import { metMuseumHttpClient } from "#lib/api/metmuseum.ts";
     import { fitGrid } from "#lib/layout/fit-grid.ts"
+    import { formatYear } from "#lib/stats/periods.ts";
     import MetObjectCard from "../../components/explore/MetObjectCard.svelte";
 
     const GAP = 16; // px
@@ -30,14 +31,31 @@
     const q = $derived(page.url.searchParams.get("q")?.trim() || "*");
     const offset = $derived(Math.max(0, Number(page.url.searchParams.get("offset")) || 0));
 
+    // Optional period (?dateBegin=1750&dateEnd=1999), e.g. from a bar of the
+    // home page histogram. The API wants both or neither.
+    const period = $derived.by(() => {
+        const begin = page.url.searchParams.get("dateBegin");
+        const end = page.url.searchParams.get("dateEnd");
+        if (begin === null || end === null) return undefined;
+        const dateBegin = Number(begin);
+        const dateEnd = Number(end);
+        return Number.isInteger(dateBegin) && Number.isInteger(dateEnd) ? { dateBegin, dateEnd } : undefined;
+    });
+
     const results = $derived(
         pageSize > 0
-            ? metMuseumHttpClient.search({ q, hasImages: true, offset, limit: pageSize })
+            ? metMuseumHttpClient.search({ q, hasImages: true, offset, limit: pageSize, ...period })
             : undefined
     );
 
-    function href(target: number) {
-        return `?${new URLSearchParams({ q, offset: String(target) })}`;
+    // Same search and period, at another position.
+    function href(target: number, withPeriod = true) {
+        const params = new URLSearchParams({ q, offset: String(target) });
+        if (period && withPeriod) {
+            params.set("dateBegin", String(period.dateBegin));
+            params.set("dateEnd", String(period.dateEnd));
+        }
+        return `?${params}`;
     }
 </script>
 
@@ -53,10 +71,24 @@
                 placeholder="Search the collection"
                 class="flex-1 border rounded-md px-3 py-2"
             />
+            <!-- Searching again stays within the period -->
+            {#if period}
+                <input type="hidden" name="dateBegin" value={period.dateBegin} />
+                <input type="hidden" name="dateEnd" value={period.dateEnd} />
+            {/if}
             <button type="submit" class="border rounded-md px-3 py-2">Search</button>
         </form>
     </div>
-    
+
+    {#if period}
+        <div class="flex">
+            <span class="flex items-center gap-2 border rounded-full pl-3 pr-1 py-1 text-sm">
+                Period: {formatYear(period.dateBegin)} – {formatYear(period.dateEnd)}
+                <a href={href(0, false)} aria-label="Remove the period filter" class="rounded-full w-6 h-6 flex items-center justify-center hover:bg-gray-200">×</a>
+            </span>
+        </div>
+    {/if}
+
 
     <main
         class="flex-1 min-h-0 overflow-hidden flex flex-col justify-center"
@@ -78,7 +110,9 @@
                     <MetObjectCard {id} />
                 {:else}
                     {#if res}
-                        <p class="col-span-full">No objects match "{q}".</p>
+                        <p class="col-span-full">
+                            No objects match "{q}"{#if period}&nbsp;between {formatYear(period.dateBegin)} and {formatYear(period.dateEnd)}{/if}.
+                        </p>
                     {/if}
                 {/each}
             {:catch error}

@@ -1,6 +1,7 @@
 <!-- Histogram of the collection: how many objects start in each period of `years` years. -->
 
 <script lang="ts">
+    import { goto } from "$app/navigation";
     import { attachAmChart } from "@amcharts/amcharts5-svelte";
     import * as am5 from "@amcharts/amcharts5";
     import * as am5xy from "@amcharts/amcharts5/xy";
@@ -96,7 +97,13 @@
                 tooltip: am5.Tooltip.new(root, { labelText: "{range}: {valueY} objects" }),
             })
         );
-        series.columns.template.setAll({ width: am5.percent(90), strokeOpacity: 0 });
+        series.columns.template.setAll({ width: am5.percent(90), strokeOpacity: 0, cursorOverStyle: "pointer" });
+        // Clicking a bar browses the objects of that period.
+        series.columns.template.events.on("click", (event) => {
+            const row = event.target.dataItem?.dataContext as HistogramRow | undefined;
+            if (row?.kind !== "period") return;
+            goto(`/explore?${new URLSearchParams({ dateBegin: String(row.start), dateEnd: String(row.end) })}`);
+        });
 
         chart = { xAxis, series };
     }

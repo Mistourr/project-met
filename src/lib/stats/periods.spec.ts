@@ -62,7 +62,7 @@ describe("histogramRows", () => {
 
     it("labels periods with their length", () => {
         const [row] = histogramRows([{ start: 1750, count: 1 }], 250);
-        expect(row).toMatchObject({ label: "1750", range: "1750 – 1999" });
+        expect(row).toMatchObject({ label: "1750", range: "1750 – 1999", start: 1750, end: 1999 });
     });
 });
 

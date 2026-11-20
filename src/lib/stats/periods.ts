@@ -72,7 +72,7 @@ export async function countPerPeriod({
 }
 
 export type HistogramRow =
-    | { kind: "period"; key: string; label: string; range: string; start: number; count: number }
+    | { kind: "period"; key: string; label: string; range: string; start: number; end: number; count: number }
     | { kind: "gap"; key: string; label: string; range: string; years: number };
 
 /**
@@ -88,6 +88,7 @@ export function histogramRows(periods: Period[], years = 100, maxEmptyYears = 10
         label: formatYear(start),
         range: `${formatYear(start)} – ${formatYear(start + years - 1)}`,
         start,
+        end: start + years - 1,
         count,
     });
 
