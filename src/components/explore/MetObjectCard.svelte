@@ -7,7 +7,7 @@
     import { onMount } from "svelte";
 
     const { id } = $props();
-    let object = metMuseumHttpClient.object(id)
+    const object = $derived(metMuseumHttpClient.object(id))
 </script>
 
 
