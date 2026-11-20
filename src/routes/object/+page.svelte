@@ -106,7 +106,7 @@
                         <li>
                             <!-- Other objects with this tag -->
                             <a
-                                href="/explore?{new URLSearchParams({ q: tag.term, tags: 'true' })}"
+                                href="/explore?{new URLSearchParams({ tag: tag.term })}"
                                 class="block border rounded-full px-3 py-1 text-sm hover:bg-gray-100"
                             >{tag.term}</a>
                         </li>

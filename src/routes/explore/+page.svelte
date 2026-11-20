@@ -1,5 +1,6 @@
 <script lang="ts">
     import { page } from "$app/state";
+    import { goto } from "$app/navigation";
     import { untrack } from "svelte";
     import { metMuseumHttpClient } from "#lib/api/metmuseum.ts";
     import { fitGrid } from "#lib/layout/fit-grid.ts"
@@ -24,47 +25,91 @@
         return () => clearTimeout(timeout);
     });
 
-    // The query and position live in the URL (?q=...&offset=...), so a page can
-    // be linked to and the back button works. The position is an offset rather
+    // The search, filters and position live in the URL
+    // (?q=...&tag=...&dateBegin=...&dateEnd=...&offset=...), so a page can be
+    // linked to and the back button works. The position is an offset rather
     // than a page number because the page size depends on the screen: after a
     // resize, the first object shown stays the same.
-    const q = $derived(page.url.searchParams.get("q")?.trim() || "*");
-    const offset = $derived(Math.max(0, Number(page.url.searchParams.get("offset")) || 0));
+    const params = $derived(page.url.searchParams);
+    const q = $derived(params.get("q")?.trim() || "*");
+    const offset = $derived(Math.max(0, Number(params.get("offset")) || 0));
 
-    // Optional period (?dateBegin=1750&dateEnd=1999), e.g. from a bar of the
-    // home page histogram. The API wants both or neither.
-    const period = $derived.by(() => {
-        const begin = page.url.searchParams.get("dateBegin");
-        const end = page.url.searchParams.get("dateEnd");
-        if (begin === null || end === null) return undefined;
-        const dateBegin = Number(begin);
-        const dateEnd = Number(end);
-        return Number.isInteger(dateBegin) && Number.isInteger(dateEnd) ? { dateBegin, dateEnd } : undefined;
-    });
+    // A tag replaces the text search: the API takes a single search term, and
+    // `tags: true` only switches it to matching the objects' subject tags.
+    const tag = $derived(params.get("tag")?.trim() || undefined);
 
-    // ?tags=true matches `q` against the objects' subject tags only, e.g. from
-    // a tag on an object's page.
-    const tags = $derived(page.url.searchParams.get("tags") === "true");
+    // Period, either end optional: the API wants both, so a missing one is
+    // replaced by a year before or after every object.
+    const OLDEST = -1_000_000;
+    const NEWEST = 3000;
+    const year = (name: string) => {
+        const value = params.get(name)?.trim();
+        return value && Number.isInteger(Number(value)) ? Number(value) : undefined;
+    };
+    const dateBegin = $derived(year("dateBegin"));
+    const dateEnd = $derived(year("dateEnd"));
+    const period = $derived(
+        dateBegin === undefined && dateEnd === undefined
+            ? undefined
+            : { dateBegin: dateBegin ?? OLDEST, dateEnd: dateEnd ?? NEWEST }
+    );
 
     const results = $derived(
         pageSize > 0
             ? metMuseumHttpClient.search({
-                  q,
+                  q: tag ?? q,
+                  ...(tag && { tags: true }),
+                  ...period,
                   hasImages: true,
                   offset,
                   limit: pageSize,
-                  ...period,
-                  ...(tags && { tags: true }),
               })
             : undefined
     );
 
-    // The current URL at another position, without the given filters.
-    function href(target: number, ...without: string[]) {
-        const params = new URLSearchParams(page.url.search);
-        params.set("offset", String(target));
-        for (const name of without) params.delete(name);
-        return `?${params}`;
+    // The current URL at another position.
+    function href(target: number) {
+        const next = new URLSearchParams(page.url.search);
+        next.set("offset", String(target));
+        return `?${next}`;
+    }
+
+    // What is typed in the search bar and the filter panel, until it is
+    // submitted. Follows the URL when it changes (back button, links).
+    let draft = $state({ q: "", tag: "", from: "", to: "" });
+    $effect(() => {
+        draft = {
+            q: q === "*" ? "" : q,
+            tag: tag ?? "",
+            from: dateBegin === undefined ? "" : String(dateBegin),
+            to: dateEnd === undefined ? "" : String(dateEnd),
+        };
+    });
+
+    const activeFilters = $derived((tag ? 1 : 0) + (period ? 1 : 0));
+    // Open on arrival when filters are on (e.g. from a tag or a chart bar).
+    let filtersOpen = $state(untrack(() => activeFilters > 0));
+
+    function search(event: SubmitEvent) {
+        event.preventDefault();
+        // Only the fields that are filled in, back to the first page
+        const next = new URLSearchParams();
+        const set = (name: string, value: string) => value.trim() && next.set(name, value.trim());
+        if (!draft.tag.trim()) set("q", draft.q);
+        set("tag", draft.tag);
+        set("dateBegin", draft.from);
+        set("dateEnd", draft.to);
+        goto(`?${next}`);
+    }
+
+    function clearFilters() {
+        draft = { ...draft, tag: "", from: "", to: "" };
+    }
+
+    function describePeriod({ dateBegin, dateEnd }: { dateBegin: number; dateEnd: number }) {
+        if (dateBegin === OLDEST) return `until ${formatYear(dateEnd)}`;
+        if (dateEnd === NEWEST) return `from ${formatYear(dateBegin)}`;
+        return `between ${formatYear(dateBegin)} and ${formatYear(dateEnd)}`;
     }
 </script>
 
@@ -73,47 +118,52 @@
         <a href="/" class="w-18 h-8 aspect-square" aria-roledescription="Go to homepage">
             <img src="/the_met.avif" alt="Logo">
         </a>
-        <form method="GET" class="flex gap-2 w-full">
+        <form id="search" onsubmit={search} class="flex gap-2 w-full">
             <input
                 name="q"
-                value={q === "*" ? "" : q}
-                placeholder="Search the collection"
-                class="flex-1 border rounded-md px-3 py-2"
+                bind:value={draft.q}
+                disabled={!!draft.tag.trim()}
+                placeholder={draft.tag.trim() ? "Searching by tag" : "Search the collection"}
+                class="flex-1 min-w-0 border rounded-md px-3 py-2 disabled:bg-gray-100"
             />
-            <!-- Searching again keeps the filters -->
-            {#if period}
-                <input type="hidden" name="dateBegin" value={period.dateBegin} />
-                <input type="hidden" name="dateEnd" value={period.dateEnd} />
-            {/if}
-            {#if tags}
-                <input type="hidden" name="tags" value="true" />
-            {/if}
+            <button
+                type="button"
+                onclick={() => (filtersOpen = !filtersOpen)}
+                aria-expanded={filtersOpen}
+                aria-controls="filters"
+                class="border rounded-md px-3 py-2 {filtersOpen ? 'bg-gray-100' : ''}"
+            >
+                Filters{#if activeFilters}&nbsp;({activeFilters}){/if}
+            </button>
             <button type="submit" class="border rounded-md px-3 py-2">Search</button>
         </form>
     </div>
 
-    {#if period || tags}
-        <div class="flex flex-wrap gap-2">
-            {#if tags}
-                {@render filter("Tag only", "Search all of the objects' data again", href(0, "tags"))}
+    {#if filtersOpen}
+        <!-- Part of the search form above: applied with the Search button or Enter -->
+        <fieldset id="filters" form="search" class="flex flex-wrap items-end gap-4 border rounded-md p-3">
+            <legend class="sr-only">Filters</legend>
+            <label class="flex flex-col gap-1 text-sm">
+                Tag
+                <input form="search" name="tag" bind:value={draft.tag} placeholder="e.g. Sunflowers" class="border rounded-md px-3 py-2" />
+            </label>
+            <label class="flex flex-col gap-1 text-sm">
+                From year
+                <input form="search" name="dateBegin" inputmode="numeric" pattern="-?[0-9]+" title="A year, negative for BC" bind:value={draft.from} placeholder="-500 for 500 BC" class="w-40 border rounded-md px-3 py-2" />
+            </label>
+            <label class="flex flex-col gap-1 text-sm">
+                To year
+                <input form="search" name="dateEnd" inputmode="numeric" pattern="-?[0-9]+" title="A year, negative for BC" bind:value={draft.to} placeholder="e.g. 1999" class="w-40 border rounded-md px-3 py-2" />
+            </label>
+            <button type="button" onclick={clearFilters} class="underline text-sm py-2">Clear filters</button>
+            <button type="submit" form="search" class="border rounded-md px-3 py-2">Apply</button>
+            {#if draft.tag.trim()}
+                <p class="basis-full text-sm text-gray-600">
+                    A tag replaces the text search: the collection can only be searched one way at a time.
+                </p>
             {/if}
-            {#if period}
-                {@render filter(
-                    `Period: ${formatYear(period.dateBegin)} – ${formatYear(period.dateEnd)}`,
-                    "Remove the period filter",
-                    href(0, "dateBegin", "dateEnd")
-                )}
-            {/if}
-        </div>
+        </fieldset>
     {/if}
-
-    {#snippet filter(label: string, removeLabel: string, removeHref: string)}
-        <span class="flex items-center gap-2 border rounded-full pl-3 pr-1 py-1 text-sm">
-            {label}
-            <a href={removeHref} aria-label={removeLabel} class="rounded-full w-6 h-6 flex items-center justify-center hover:bg-gray-200">×</a>
-        </span>
-    {/snippet}
-
 
     <main
         class="flex-1 min-h-0 overflow-hidden flex flex-col justify-center"
@@ -136,7 +186,7 @@
                 {:else}
                     {#if res}
                         <p class="col-span-full">
-                            No objects {tags ? "tagged" : "match"} "{q}"{#if period}&nbsp;between {formatYear(period.dateBegin)} and {formatYear(period.dateEnd)}{/if}.
+                            No objects {tag ? `tagged "${tag}"` : `match "${q}"`}{#if period}&nbsp;{describePeriod(period)}{/if}.
                         </p>
                     {/if}
                 {/each}
