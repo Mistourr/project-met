@@ -13,14 +13,15 @@
 
 
 {#await object}
-    <div class="flex flex-row gap-3 w-fit h-fit">
-        <span class="w-32 h-32 bg-gray-200 animate-pulse "></span>
-        <span></span>
+    <div class="flex flex-col gap-2 w-full h-full min-h-0">
+        <span class="flex-1 min-h-0 bg-gray-200 animate-pulse rounded-md"></span>
+        <!-- <span class="h-5 w-2/3 bg-gray-200 animate-pulse rounded-md"></span> -->
     </div>
 {:then object}
-    <button class="flex flex-row gap-3 w-fit h-fit">
-        <span class="w-32 h-32 bg-center bg-cover rounded-md bg-no-repeat" style="background-image: url({object.primaryImageSmall});"></span>
-        <h3>{object.title}</h3>
+    <button class="flex flex-col gap-2 w-full h-full min-h-0 text-left">
+        <span class="flex-1 min-h-0 w-full bg-center bg-cover rounded-md bg-no-repeat" style="background-image: url({object.primaryImageSmall});">
+            <h3 class="truncate">{object.title}</h3>
+        </span>
     </button>
 {:catch error}
     <p style="color: red">{error.message}</p>
