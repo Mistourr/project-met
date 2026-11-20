@@ -7,21 +7,19 @@
     import { onMount } from "svelte";
 
     const { id } = $props();
-    let object = $state(new Promise<MetObject>(() => {}));
-    onMount(() => {
-        setTimeout(() => {
-        object = metMuseumHttpClient.object(id)
-    }, 150);
-    })
+    let object = metMuseumHttpClient.object(id)
 </script>
 
 
 
 {#await object}
-    Fetching...
+    <div class="flex flex-row gap-3 w-fit h-fit">
+        <span class="w-32 h-32 bg-gray-200 animate-pulse "></span>
+        <span></span>
+    </div>
 {:then object}
-    <button class="flex flex-row gap-3">
-        <img src={object.primaryImageSmall} alt="Thumbnail" height="128px" width="128px">
+    <button class="flex flex-row gap-3 w-fit h-fit">
+        <span class="w-32 h-32 bg-center bg-cover rounded-md bg-no-repeat" style="background-image: url({object.primaryImageSmall});"></span>
         <h3>{object.title}</h3>
     </button>
 {:catch error}
