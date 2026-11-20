@@ -12,5 +12,5 @@ a.btn-like {
 a.btn-like:hover {
     background: var(--met-brand-primary);
     color: white;
-    border: none;
+    border-color: var(--met-brand-primary);
 }
