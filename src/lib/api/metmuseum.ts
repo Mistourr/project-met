@@ -1,11 +1,12 @@
 import { Fetcher } from "#lib/fetcher.ts";
-import type { MetObject, SearchParams, SearchResponse } from "#lib/models/metmuseum.ts";
+import type { Department, DepartmentsResponse, MetObject, SearchParams, SearchResponse } from "#lib/models/metmuseum.ts";
 import { MET_COLLECTION_API_BASE } from "$app/env/public"
 import * as v from "valibot"
 
 export interface MetMuseumApi {
     objects: () => Promise<{ total: number; objectIDs: number[]; }>
     search: (params: SearchParams) => Promise<SearchResponse>
+    departments: () => Promise<Department[]>
 }
 
 class MetMuseumHttpClient implements MetMuseumApi {
@@ -56,6 +57,21 @@ class MetMuseumHttpClient implements MetMuseumApi {
         )
         // The API answers `objectIDs: null` when nothing matches
         return { total: response.total, objectIDs: response.objectIDs ?? [] }
+    }
+
+    // The list of departments hardly ever changes: fetched once per session.
+    private departmentsCache: Promise<Department[]> | undefined
+
+    /**
+     * Returns the museum's departments, for `departmentId` in `search()`.
+     */
+    departments = (): Promise<Department[]> => {
+        this.departmentsCache ??= this.fetcher
+            .getJson<DepartmentsResponse>(`${MET_COLLECTION_API_BASE}/v1/departments`)
+            .then((response) => response.departments)
+        // A failed request can be tried again later
+        this.departmentsCache.catch(() => (this.departmentsCache = undefined))
+        return this.departmentsCache
     }
 
 }

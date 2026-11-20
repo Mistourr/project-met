@@ -2,7 +2,7 @@
     import { page } from "$app/state";
     import { afterNavigate } from "$app/navigation";
     import { metMuseumHttpClient } from "#lib/api/metmuseum.ts";
-    import type { MetObject } from "#lib/models/metmuseum.ts";
+    import type { Department, MetObject } from "#lib/models/metmuseum.ts";
     import ImageCarousel, { type CarouselImage } from "../../components/object/ImageCarousel.svelte";
 
     // /object?id=436524
@@ -40,6 +40,16 @@
         return { name, bio: o.artistDisplayBio };
     }
 
+    // Objects only name their department, the explore filter wants its id.
+    let departments = $state.raw<Department[]>([]);
+    $effect(() => {
+        metMuseumHttpClient.departments().then((list) => (departments = list), () => {});
+    });
+    function departmentHref(name: string) {
+        const department = departments.find((d) => d.displayName === name);
+        return department && `/explore?${new URLSearchParams({ department: String(department.departmentId) })}`;
+    }
+
     // Detail rows, skipping the ones the API leaves empty for this object.
     // A row with a link opens /explore filtered on that value.
     type Detail = [label: string, value: string, href?: string];
@@ -57,7 +67,8 @@
             ["Dimensions", o.dimensions],
             ["Place", place],
             ["Excavation", o.excavation],
-            ["Department", o.department],
+            // Plain text until the departments are loaded, or if the name isn't in the list
+            ["Department", o.department, departmentHref(o.department)],
             ["Credit line", o.creditLine],
             ["Accession number", o.accessionNumber],
             ["On view", o.GalleryNumber && `Gallery ${o.GalleryNumber}`],

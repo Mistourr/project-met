@@ -5,6 +5,7 @@
     import { metMuseumHttpClient } from "#lib/api/metmuseum.ts";
     import { fitGrid } from "#lib/layout/fit-grid.ts"
     import { formatYear } from "#lib/stats/periods.ts";
+    import type { Department } from "#lib/models/metmuseum.ts";
     import MetObjectCard from "../../components/explore/MetObjectCard.svelte";
 
     const GAP = 16; // px
@@ -26,7 +27,7 @@
     });
 
     // The search, filters and position live in the URL
-    // (?q=...&tag=...&dateBegin=...&dateEnd=...&offset=...), so a page can be
+    // (?q=...&tag=...&department=...&dateBegin=...&dateEnd=...&offset=...), so a page can be
     // linked to and the back button works. The position is an offset rather
     // than a page number because the page size depends on the screen: after a
     // resize, the first object shown stays the same.
@@ -56,6 +57,19 @@
             : { dateBegin: dateBegin ?? OLDEST, dateEnd: dateEnd ?? NEWEST }
     );
 
+    // Department (?department=11), combines with everything else.
+    const departmentId = $derived.by(() => {
+        const id = Number(params.get("department"));
+        return Number.isInteger(id) && id > 0 ? id : undefined;
+    });
+
+    // For the filter's dropdown and to name the department in messages.
+    let departments = $state.raw<Department[]>([]);
+    $effect(() => {
+        metMuseumHttpClient.departments().then((list) => (departments = list), () => {});
+    });
+    const departmentName = $derived(departments.find((d) => d.departmentId === departmentId)?.displayName);
+
     const results = $derived(
         pageSize > 0
             ? metMuseumHttpClient.search({
@@ -64,6 +78,7 @@
                   // Matches the artist too: the API has no culture-only search
                   ...(culture && { artistOrCulture: true }),
                   ...period,
+                  departmentId,
                   hasImages: true,
                   offset,
                   limit: pageSize,
@@ -80,18 +95,21 @@
 
     // What is typed in the search bar and the filter panel, until it is
     // submitted. Follows the URL when it changes (back button, links).
-    let draft = $state({ q: "", tag: "", culture: "", from: "", to: "" });
+    let draft = $state({ q: "", tag: "", culture: "", department: "", from: "", to: "" });
     $effect(() => {
         draft = {
             q: q === "*" ? "" : q,
             tag: tag ?? "",
             culture: culture ?? "",
+            department: departmentId === undefined ? "" : String(departmentId),
             from: dateBegin === undefined ? "" : String(dateBegin),
             to: dateEnd === undefined ? "" : String(dateEnd),
         };
     });
 
-    const activeFilters = $derived((tag ? 1 : 0) + (culture ? 1 : 0) + (period ? 1 : 0));
+    const activeFilters = $derived(
+        (tag ? 1 : 0) + (culture ? 1 : 0) + (departmentId ? 1 : 0) + (period ? 1 : 0)
+    );
     // Which single term the draft searches by, if not the text box
     const draftTerm = $derived(draft.tag.trim() ? "tag" : draft.culture.trim() ? "culture" : undefined);
     // Open on arrival when filters are on (e.g. from a tag or a chart bar).
@@ -105,13 +123,14 @@
         if (draftTerm === "tag") set("tag", draft.tag);
         else if (draftTerm === "culture") set("culture", draft.culture);
         else set("q", draft.q);
+        set("department", draft.department);
         set("dateBegin", draft.from);
         set("dateEnd", draft.to);
         goto(`?${next}`);
     }
 
     function clearFilters() {
-        draft = { ...draft, tag: "", culture: "", from: "", to: "" };
+        draft = { ...draft, tag: "", culture: "", department: "", from: "", to: "" };
     }
 
     function describePeriod({ dateBegin, dateEnd }: { dateBegin: number; dateEnd: number }) {
@@ -160,6 +179,15 @@
                 <input form="search" name="culture" bind:value={draft.culture} disabled={draftTerm === "tag"} placeholder="e.g. Japan" class="border rounded-md px-3 py-2 disabled:bg-gray-100" />
             </label>
             <label class="flex flex-col gap-1 text-sm">
+                Department
+                <select form="search" name="department" bind:value={draft.department} class="border rounded-md px-3 py-2 max-w-64">
+                    <option value="">All departments</option>
+                    {#each departments as d (d.departmentId)}
+                        <option value={String(d.departmentId)}>{d.displayName}</option>
+                    {/each}
+                </select>
+            </label>
+            <label class="flex flex-col gap-1 text-sm">
                 From year
                 <input form="search" name="dateBegin" inputmode="numeric" pattern="-?[0-9]+" title="A year, negative for BC" bind:value={draft.from} placeholder="-500 for 500 BC" class="w-40 border rounded-md px-3 py-2" />
             </label>
@@ -199,7 +227,7 @@
                 {:else}
                     {#if res}
                         <p class="col-span-full">
-                            No objects {tag ? `tagged "${tag}"` : culture ? `from the "${culture}" culture` : `match "${q}"`}{#if period}&nbsp;{describePeriod(period)}{/if}.
+                            No objects {tag ? `tagged "${tag}"` : culture ? `from the "${culture}" culture` : `match "${q}"`}{#if departmentId}&nbsp;in {departmentName ?? "this department"}{/if}{#if period}&nbsp;{describePeriod(period)}{/if}.
                         </p>
                     {/if}
                 {/each}

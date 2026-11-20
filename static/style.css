@@ -1,3 +1,16 @@
 html {
     --met-brand-primary: #E4012A;
+    --met-brand-secondary: #9A2933;
+}
+
+a.btn-like {
+    border: 1px solid black;
+    background: white;
+    padding: 0.75rem;
+}
+
+a.btn-like:hover {
+    background: var(--met-brand-primary);
+    color: white;
+    border: none;
 }
