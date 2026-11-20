@@ -1,5 +1,9 @@
 <script lang="ts">
     import PeriodHistogram from "../components/home/PeriodHistogram.svelte";
+    import DepartmentLinks from "../components/home/DepartmentLinks.svelte";
+
+    // Filled in by DepartmentLinks once the list is loaded (19 when last checked)
+    let departmentCount = $state(0);
 </script>
 
 <div class="h-screen w-full overflow-y-scroll snap-y snap-mandatory">
@@ -9,10 +13,11 @@
             <h2 class="text-4xl">From <span class="text-(--met-brand-secondary)">Prehistory</span> to <span class="text-(--met-brand-secondary)">Today</span></h2>
             <h2 class="text-4xl">A collection of <span class="text-(--met-brand-secondary)">500,000+ objects</span> for you to see</h2>
         </div>
-        <div class="text-4xl">
-            17 departments
-        </div>
-        <span>
+        <a href="#screen-3" class="text-4xl hover:underline">
+            Look into one of the <span class="text-(--met-brand-secondary)">{departmentCount || 19} departments</span> in the museum
+        </a>
+        <span class="flex flex-col gap-8 items-center">
+            <span class="text-2xl">OR</span>
             <a href="/explore" class="btn-like rounded text-3xl">Explore the collection</a>
         </span>
         <div class="flex flex-col gap-3 justify-center animate-bounce">
@@ -26,6 +31,11 @@
         <div class="flex-1 min-h-0">
             <PeriodHistogram years={250} />
         </div>
+    </section>
+    <section id="screen-3" class="min-h-screen w-full flex flex-col snap-start gap-4 p-8">
+        <h2 class="text-3xl font-bold">Departments</h2>
+        <p>Explore the objects of one department of the museum</p>
+        <DepartmentLinks bind:count={departmentCount} />
     </section>
 </div>
 <!-- <MetObject title="Le Grand Test de 1345" thumbnail=""></MetObject> -->
