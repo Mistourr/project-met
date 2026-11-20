@@ -14,8 +14,8 @@
         Fetching...
     {:then list}
         <div class="flex-1 min-h-0">
-            <VirtualList height="100%" itemHeight={48} items={list.objectIDs} bind:start bind:end let:item>
-                <div class="h-12">
+            <VirtualList height="100%" items={list.objectIDs} bind:start bind:end let:item>
+                <div class="h-fit m-3">
                     <MetObject id={item} />
                 </div>
             </VirtualList>

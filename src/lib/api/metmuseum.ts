@@ -9,8 +9,8 @@ export interface MetMuseumApi {
 
 class MetMuseumHttpClient implements MetMuseumApi {
 
-    // Initialize a Fetcher with 80 RPS
-    private fetcher = new Fetcher(60)
+    // Retries throttled requests with exponential backoff until they go through
+    private fetcher = new Fetcher()
     
     /**
      * Returns all objects (only IDs)
