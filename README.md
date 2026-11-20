@@ -5,7 +5,13 @@
 - Svelte components use PascalCase
 - Everything else use kebab-case
 
-## Developing
+## What could be done
+- i18n and l10n
+- dark mode
+
+## Run the app
+
+### Developing
 
 Run the dev server by running
 
@@ -16,7 +22,7 @@ npm run dev
 npm run dev -- --open
 ```
 
-## Building
+### Building
 
 To create a production version run
 
@@ -27,3 +33,4 @@ npm run build
 You can preview the production build with `npm run preview`.
 
 > To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+
