@@ -34,9 +34,11 @@
     const q = $derived(params.get("q")?.trim() || "*");
     const offset = $derived(Math.max(0, Number(params.get("offset")) || 0));
 
-    // A tag replaces the text search: the API takes a single search term, and
-    // `tags: true` only switches it to matching the objects' subject tags.
+    // A tag or a culture replaces the text search: the API takes a single
+    // search term, and `tags` / `artistOrCulture` only switch what it is
+    // matched against. So there is at most one of the two (tag wins).
     const tag = $derived(params.get("tag")?.trim() || undefined);
+    const culture = $derived(tag ? undefined : params.get("culture")?.trim() || undefined);
 
     // Period, either end optional: the API wants both, so a missing one is
     // replaced by a year before or after every object.
@@ -57,8 +59,10 @@
     const results = $derived(
         pageSize > 0
             ? metMuseumHttpClient.search({
-                  q: tag ?? q,
+                  q: tag ?? culture ?? q,
                   ...(tag && { tags: true }),
+                  // Matches the artist too: the API has no culture-only search
+                  ...(culture && { artistOrCulture: true }),
                   ...period,
                   hasImages: true,
                   offset,
@@ -76,17 +80,20 @@
 
     // What is typed in the search bar and the filter panel, until it is
     // submitted. Follows the URL when it changes (back button, links).
-    let draft = $state({ q: "", tag: "", from: "", to: "" });
+    let draft = $state({ q: "", tag: "", culture: "", from: "", to: "" });
     $effect(() => {
         draft = {
             q: q === "*" ? "" : q,
             tag: tag ?? "",
+            culture: culture ?? "",
             from: dateBegin === undefined ? "" : String(dateBegin),
             to: dateEnd === undefined ? "" : String(dateEnd),
         };
     });
 
-    const activeFilters = $derived((tag ? 1 : 0) + (period ? 1 : 0));
+    const activeFilters = $derived((tag ? 1 : 0) + (culture ? 1 : 0) + (period ? 1 : 0));
+    // Which single term the draft searches by, if not the text box
+    const draftTerm = $derived(draft.tag.trim() ? "tag" : draft.culture.trim() ? "culture" : undefined);
     // Open on arrival when filters are on (e.g. from a tag or a chart bar).
     let filtersOpen = $state(untrack(() => activeFilters > 0));
 
@@ -95,15 +102,16 @@
         // Only the fields that are filled in, back to the first page
         const next = new URLSearchParams();
         const set = (name: string, value: string) => value.trim() && next.set(name, value.trim());
-        if (!draft.tag.trim()) set("q", draft.q);
-        set("tag", draft.tag);
+        if (draftTerm === "tag") set("tag", draft.tag);
+        else if (draftTerm === "culture") set("culture", draft.culture);
+        else set("q", draft.q);
         set("dateBegin", draft.from);
         set("dateEnd", draft.to);
         goto(`?${next}`);
     }
 
     function clearFilters() {
-        draft = { ...draft, tag: "", from: "", to: "" };
+        draft = { ...draft, tag: "", culture: "", from: "", to: "" };
     }
 
     function describePeriod({ dateBegin, dateEnd }: { dateBegin: number; dateEnd: number }) {
@@ -122,8 +130,8 @@
             <input
                 name="q"
                 bind:value={draft.q}
-                disabled={!!draft.tag.trim()}
-                placeholder={draft.tag.trim() ? "Searching by tag" : "Search the collection"}
+                disabled={!!draftTerm}
+                placeholder={draftTerm ? `Searching by ${draftTerm}` : "Search the collection"}
                 class="flex-1 min-w-0 border rounded-md px-3 py-2 disabled:bg-gray-100"
             />
             <button
@@ -145,7 +153,11 @@
             <legend class="sr-only">Filters</legend>
             <label class="flex flex-col gap-1 text-sm">
                 Tag
-                <input form="search" name="tag" bind:value={draft.tag} placeholder="e.g. Sunflowers" class="border rounded-md px-3 py-2" />
+                <input form="search" name="tag" bind:value={draft.tag} disabled={draftTerm === "culture"} placeholder="e.g. Sunflowers" class="border rounded-md px-3 py-2 disabled:bg-gray-100" />
+            </label>
+            <label class="flex flex-col gap-1 text-sm">
+                Culture
+                <input form="search" name="culture" bind:value={draft.culture} disabled={draftTerm === "tag"} placeholder="e.g. Japan" class="border rounded-md px-3 py-2 disabled:bg-gray-100" />
             </label>
             <label class="flex flex-col gap-1 text-sm">
                 From year
@@ -157,9 +169,10 @@
             </label>
             <button type="button" onclick={clearFilters} class="underline text-sm py-2">Clear filters</button>
             <button type="submit" form="search" class="border rounded-md px-3 py-2">Apply</button>
-            {#if draft.tag.trim()}
+            {#if draftTerm}
                 <p class="basis-full text-sm text-gray-600">
-                    A tag replaces the text search: the collection can only be searched one way at a time.
+                    A {draftTerm} replaces the text search, and tag and culture can't be combined: the collection can only be searched one way at a time.
+                    {#if draftTerm === "culture"}Artists matching the culture are included too.{/if}
                 </p>
             {/if}
         </fieldset>
@@ -186,7 +199,7 @@
                 {:else}
                     {#if res}
                         <p class="col-span-full">
-                            No objects {tag ? `tagged "${tag}"` : `match "${q}"`}{#if period}&nbsp;{describePeriod(period)}{/if}.
+                            No objects {tag ? `tagged "${tag}"` : culture ? `from the "${culture}" culture` : `match "${q}"`}{#if period}&nbsp;{describePeriod(period)}{/if}.
                         </p>
                     {/if}
                 {/each}

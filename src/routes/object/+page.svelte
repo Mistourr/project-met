@@ -41,13 +41,15 @@
     }
 
     // Detail rows, skipping the ones the API leaves empty for this object.
-    function detailsOf(o: MetObject): [string, string][] {
+    // A row with a link opens /explore filtered on that value.
+    type Detail = [label: string, value: string, href?: string];
+    function detailsOf(o: MetObject): Detail[] {
         const place = [o.city, o.state, o.county, o.country, o.region, o.subregion, o.locale, o.locus]
             .filter(Boolean)
             .join(", ");
-        const rows: [string, string | undefined][] = [
+        const rows: [string, string | undefined, string?][] = [
             ["Date", o.objectDate],
-            ["Culture", o.culture],
+            ["Culture", o.culture, `/explore?${new URLSearchParams({ culture: o.culture })}`],
             ["Period", o.period],
             ["Dynasty", o.dynasty],
             ["Reign", o.reign],
@@ -60,7 +62,7 @@
             ["Accession number", o.accessionNumber],
             ["On view", o.GalleryNumber && `Gallery ${o.GalleryNumber}`],
         ];
-        return rows.filter((row): row is [string, string] => !!row[1]);
+        return rows.filter((row): row is Detail => !!row[1]);
     }
 </script>
 
@@ -94,9 +96,11 @@
             </p>
 
             <dl class="grid grid-cols-1 sm:grid-cols-[max-content_1fr] gap-x-6 gap-y-2">
-                {#each detailsOf(o) as [label, value] (label)}
+                {#each detailsOf(o) as [label, value, href] (label)}
                     <dt class="font-bold">{label}</dt>
-                    <dd class="mb-2 sm:mb-0">{value}</dd>
+                    <dd class="mb-2 sm:mb-0">
+                        {#if href}<a {href} class="underline">{value}</a>{:else}{value}{/if}
+                    </dd>
                 {/each}
             </dl>
 
