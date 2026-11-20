@@ -194,3 +194,7 @@ npm run build
 You can preview the production build with `npm run preview`.
 
 > To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+
+## AI use
+
+AI was used throughout the entire project (first time for me), with human review but not so much human refactor hence the sometimes sloppy code.
