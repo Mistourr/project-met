@@ -7,10 +7,10 @@ export interface MetMuseumApi {
     objects: () => Promise<{ total: number; objectIDs: number[]; }>
 }
 
-export class MetMuseumHttpClient implements MetMuseumApi {
+class MetMuseumHttpClient implements MetMuseumApi {
 
     // Initialize a Fetcher with 80 RPS
-    private fetcher = new Fetcher(80)
+    private fetcher = new Fetcher(60)
     
     /**
      * Returns all objects (only IDs)
@@ -22,12 +22,27 @@ export class MetMuseumHttpClient implements MetMuseumApi {
         }>(`${MET_COLLECTION_API_BASE}/v1/objects`);
     }
 
-    object = async (id: number): Promise<MetObject> => {
-        return await this.fetcher.getJson<MetObject>(
-            `${MET_COLLECTION_API_BASE}/v1/objects/${id}`
+    // Objects already fetched, so scrolling back doesn't request them again.
+    private objectCache = new Map<number, MetObject>()
+
+    /**
+     * Returns one object. Pass a signal to cancel the request while it is
+     * still queued (e.g. when its row scrolls out of view).
+     */
+    object = async (id: number, signal?: AbortSignal): Promise<MetObject> => {
+        const cached = this.objectCache.get(id)
+        if (cached)
+            return cached
+        const object = await this.fetcher.getJson<MetObject>(
+            `${MET_COLLECTION_API_BASE}/v1/objects/${id}`,
+            { signal }
         )
+        this.objectCache.set(id, object)
+        return object
     }
 
     
 
 }
+
+export const metMuseumHttpClient = new MetMuseumHttpClient()
