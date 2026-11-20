@@ -3,10 +3,10 @@
 
 <div class="h-screen w-full overflow-y-scroll snap-y snap-mandatory">
     <section id="screen-1" class="h-screen w-full flex flex-col snap-start items-center justify-between py-8">
-        <h1 class="text-6xl">Metropolitan Museum of Art</h1>
+        <h1 class="text-6xl text-(--met-brand-primary)">Metropolitan Museum of Art</h1>
         
         <div class="flex flex-col gap-3 items-center px-8">
-            <h2 class="text-3xl">From Prehistory to today</h2>
+            <h2 class="text-3xl">From Prehistory to Today</h2>
             <h2 class="text-3xl">A collection of 500,000+ objects for you to see</h2>
             <a href="/explore" class="">Explore</a>
         </div>
