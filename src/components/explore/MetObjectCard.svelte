@@ -15,9 +15,17 @@
     </div>
 {:then object}
     <a href="/object?id={id}" class="flex flex-col gap-2 w-full h-full min-h-0 text-left">
-        <span class="flex-1 min-h-0 w-full bg-center bg-cover rounded-md bg-no-repeat" style="background-image: url({object.primaryImageSmall});">
-            <h3 class="truncate">{object.title}</h3>
-        </span>
+        <!-- Even with hasImages, some objects come back without one (e.g. rights-restricted) -->
+        {#if object.primaryImageSmall}
+            <span class="flex-1 min-h-0 w-full bg-center bg-cover rounded-md bg-no-repeat" style="background-image: url({object.primaryImageSmall});">
+                <h3 class="truncate">{object.title}</h3>
+            </span>
+        {:else}
+            <span class="relative flex-1 min-h-0 w-full rounded-md bg-gray-100">
+                <h3 class="truncate">{object.title}</h3>
+                <span class="absolute inset-0 flex items-center justify-center text-sm text-gray-600">No available image</span>
+            </span>
+        {/if}
     </a>
 {:catch error}
     <p style="color: red">{error.message}</p>
