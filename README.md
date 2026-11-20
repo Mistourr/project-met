@@ -145,7 +145,7 @@ The app works around these limits of the Met Collection API:
 - dark mode
 - make API tests less flaky somehow
 - validate API responses with the Valibot schemas in `src/lib/schemas`
-
+- missings tests :\
 ## Run the app
 
 ### Setup
